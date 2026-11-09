@@ -1,0 +1,680 @@
+import { describe, it, expect, afterAll, beforeAll } from 'vitest';
+import { run, generate } from '../src/index.js';
+import { readFileSync, existsSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+
+const outputRoot = join(import.meta.dirname, '..', '.test-output');
+const exampleXmlDir = join(import.meta.dirname, '..', 'example', 'xml');
+const fileGroupedXmlDir = join(import.meta.dirname, 'fixtures', 'file-grouped', 'xml-out', 'xml');
+const fileGroupedSourceDir = join(import.meta.dirname, 'fixtures', 'file-grouped', 'src');
+const sharedGroupedXmlDir = join(import.meta.dirname, 'fixtures', 'shared-grouped', 'xml-out', 'xml');
+const sharedGroupedSourceDir = join(import.meta.dirname, 'fixtures', 'shared-grouped', 'src');
+const titleDisambiguationXmlDir = join(import.meta.dirname, 'fixtures', 'title-disambiguation', 'xml-out', 'xml');
+const titleDuplicationXmlDir = join(import.meta.dirname, 'fixtures', 'title-duplication', 'xml-out', 'xml');
+const ungroupedXmlDir = join(import.meta.dirname, 'fixtures', 'ungrouped', 'xml-out', 'xml');
+const programlistingLangXmlDir = join(import.meta.dirname, 'fixtures', 'programlisting-language', 'xml-out', 'xml');
+const missingTagsXmlDir = join(import.meta.dirname, 'fixtures', 'missing-tags', 'xml-out', 'xml');
+const memberKindsXmlDir = join(import.meta.dirname, 'fixtures', 'member-kinds', 'xml-out', 'xml');
+const issue97XmlDir = join(import.meta.dirname, 'fixtures', 'issue-97', 'xml-out', 'xml');
+const globalGroupsXmlDir = join(import.meta.dirname, 'fixtures', 'global-groups', 'xml-out', 'xml');
+const macrosXmlDir = join(import.meta.dirname, 'fixtures', 'macros', 'xml-out', 'xml');
+const drawnLinksXmlDir = join(import.meta.dirname, 'fixtures', 'drawn-links', 'xml-out', 'xml');
+const globalScopeXmlDir = join(import.meta.dirname, 'fixtures', 'global-scope', 'xml-out', 'xml');
+
+const exampleOutputDir = join(outputRoot, 'example');
+
+function read(path: string): string {
+  return readFileSync(path, 'utf8');
+}
+
+afterAll(() => {
+  if (existsSync(outputRoot)) {
+    rmSync(outputRoot, { recursive: true });
+  }
+});
+
+beforeAll(async () => {
+  await run({
+    directory: exampleXmlDir,
+    output: join(exampleOutputDir, 'api-%s.md'),
+    groups: true,
+    pages: true,
+    anchors: true,
+    quiet: true,
+  });
+});
+
+describe('integration', () => {
+  it('generates grouped output from example XML', async () => {
+    const expectedFiles = [
+      'api-bicycle.md',
+      'api-mountainbike.md',
+      'api-racingbike.md',
+    ];
+
+    for (const file of expectedFiles) {
+      const filepath = join(exampleOutputDir, file);
+      expect(existsSync(filepath), `${file} should exist`).toBe(true);
+      expect(read(filepath).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('generates page output', async () => {
+    const expectedPages = [
+      'page-changelog.md',
+      'page-overview.md',
+    ];
+
+    for (const file of expectedPages) {
+      const filepath = join(exampleOutputDir, file);
+      expect(existsSync(filepath), `${file} should exist`).toBe(true);
+      expect(read(filepath).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('outputs expected explicit-group class documentation', async () => {
+    const content = read(join(exampleOutputDir, 'api-bicycle.md'));
+    const mountainBikeContent = read(join(exampleOutputDir, 'api-mountainbike.md'));
+
+    expect(content).toContain('# Bycicle module');
+    expect(content).not.toContain('# bicycle');
+    expect(mountainBikeContent).toContain('# Mountain bike module');
+    expect(mountainBikeContent).not.toContain('# mountainbike');
+    expect(content).toContain('Bicycle');
+    expect(content).toContain('PedalHarder');
+    expect(content).toContain('RingBell');
+    expect(content).toContain('{#pedalharder}');
+    expect(content).toContain('#### Public Methods');
+    expect(content).toContain('#include <bicycle.h>');
+    expect(content).toContain('`void`');
+    expect(content).toContain('`virtual`');
+    expect(content).toContain('Standard bicycle class');
+  });
+
+  it('names the class that declares an overridden or overriding member', async () => {
+    const bicycle = read(join(exampleOutputDir, 'api-bicycle.md'));
+    const racingBike = read(join(exampleOutputDir, 'api-racingbike.md'));
+
+    expect(bicycle).toMatch(/###### Reimplemented by\n\n- \[`RacingBike::PedalHarder`\]\(api-racingbike\.md#pedalharder-1\)/);
+    expect(racingBike).toMatch(/###### Reimplements\n\n- \[`Bicycle::PedalHarder`\]\(api-bicycle\.md#pedalharder\)/);
+  });
+
+  it('recovers grouped output from file-level grouped fixtures', async () => {
+    const outputDir = join(outputRoot, 'file-grouped');
+
+    await run({
+      directory: fileGroupedXmlDir,
+      output: join(outputDir, '%s.md'),
+      groups: true,
+      anchors: true,
+      quiet: true,
+      sourceRoot: fileGroupedSourceDir,
+    });
+
+    const filepath = join(outputDir, 'widget.md');
+    expect(existsSync(filepath), 'widget.md should exist').toBe(true);
+
+    const content = read(filepath);
+    expect(content.length).toBeGreaterThan(0);
+    expect(content).toContain('# Widget module');
+    expect(content).toContain('Module page for a widget API documented with file-level grouping.');
+    expect(content).toContain('## Namespaces');
+    expect(content).toContain('documented via file-level grouping only.');
+    expect(content).toContain('createWidget');
+    expect(content).toContain('Returns the current widget size.');
+    expect(content).toContain('### Options');
+    expect(content).toContain('nested inside [Widget](#widget)');
+  });
+
+  it('preserves ungrouped namespace and class output', async () => {
+    const outputDir = join(outputRoot, 'ungrouped');
+
+    await run({
+      directory: ungroupedXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    const namespacePath = join(outputDir, 'demo.md');
+    const classPath = join(outputDir, 'demo-Plain.md');
+
+    expect(existsSync(namespacePath), 'demo.md should exist').toBe(true);
+    expect(existsSync(classPath), 'demo-Plain.md should exist').toBe(true);
+
+    const namespaceContent = read(namespacePath);
+    expect(namespaceContent).toContain('# demo');
+    expect(namespaceContent).toContain('namespace-scoped type for ungrouped rendering.');
+    expect(namespaceContent).toContain('demo-Plain.md#plain');
+
+    const classContent = read(classPath);
+    expect(classContent).toContain('# Plain');
+    expect(classContent).toContain('#include <plain.h>');
+    expect(classContent).toContain('Returns a stable value.');
+  });
+
+  it('links a grouped overview to each namespace where it is drawn', async () => {
+    const outputDir = join(outputRoot, 'file-grouped-links');
+
+    await run({
+      directory: fileGroupedXmlDir,
+      output: join(outputDir, '%s.md'),
+      groups: true,
+      anchors: true,
+      quiet: true,
+      sourceRoot: fileGroupedSourceDir,
+    });
+
+    // One file per module draws the namespace on the module's own page.
+    const markdownMirror = read(join(outputDir, 'widget.md'));
+    expect(markdownMirror).toContain('| [`demo`](#demo) |');
+
+    const pages = await generate({
+      directory: fileGroupedXmlDir,
+      groups: true,
+      anchors: true,
+      quiet: true,
+      sourceRoot: fileGroupedSourceDir,
+    });
+
+    // Generated pages give the namespace a page of its own, so the overview links there.
+    const groupPage = pages.find((page) => page.kind === 'group' && page.slug === 'widget');
+    expect(groupPage).toBeDefined();
+    expect(groupPage!.markdown).toContain('| [`demo`](demo.html#demo) |');
+  });
+
+  it('pages global scope and only the namespaces with something to show', async () => {
+    const pages = await generate({ directory: globalScopeXmlDir, quiet: true });
+    const page = (slug: string) => pages.find((candidate) => candidate.slug === slug);
+    // An undocumented namespace holding only other namespaces wraps them and has no page.
+    expect(pages.map((candidate) => candidate.slug).sort()).toEqual(
+      ['Counter', 'Point', 'acme-net', 'acme-net-Connection', 'acme-net-detail', 'acme-net-detail-Buffer', 'globals'],
+    );
+    expect(page('acme-net')!.markdown).toContain('| [`detail`](acme-net-detail.html#detail) | Transport internals. |');
+
+    // Types outside every namespace have pages of their own, and the members beside them share one.
+    expect(page('Counter')!.markdown).toContain('A counter outside every namespace.');
+    expect(page('Point')!.kind).toBe('union');
+    const globals = page('globals')!;
+    expect(globals).toMatchObject({ title: 'Globals', kind: 'globals', description: 'Macros and functions at global scope.' });
+    expect(globals.markdown).toContain('# Globals');
+    expect(globals.markdown).toContain('| [`Point`](Point.html#point) | Two coordinates, stored either way. |');
+    expect(globals.markdown).toContain('| [`Counter`](Counter.html#counter) | A counter outside every namespace. |');
+    expect(globals.markdown).toContain('The largest count a [Counter](Counter.html#counter) holds.');
+    expect(globals.markdown).toContain('### reset_all');
+    expect(globals.searchEntries).toContainEqual(expect.objectContaining({ title: 'reset_all', ownerKind: 'globals', qualifiedName: 'reset_all' }));
+    expect(globals.searchEntries!.every((entry) => entry.owner === undefined)).toBe(true);
+
+    // With groups, what no group claims is still paged.
+    const grouped = await generate({ directory: globalGroupsXmlDir, groups: true, quiet: true });
+    expect(grouped.find((candidate) => candidate.slug === 'global_class')!.markdown).toContain('This is a global class.');
+    const groupedGlobals = grouped.find((candidate) => candidate.slug === 'globals')!;
+    expect(groupedGlobals.markdown).toContain('### GDEFINE');
+    expect(groupedGlobals.markdown).toContain('### mysql_tmpfile');
+    expect(groupedGlobals.markdown).not.toContain('nested_class');
+  });
+
+  it('writes no page for a namespace that only wraps others', async () => {
+    const outputDir = join(outputRoot, 'global-scope');
+    await run({ directory: globalScopeXmlDir, output: join(outputDir, '%s.md'), classes: true, anchors: true, quiet: true });
+
+    expect(existsSync(join(outputDir, 'acme.md'))).toBe(false);
+    const api = read(join(outputDir, 'api.md'));
+    expect(api).not.toContain('acme.md');
+    expect(api).toContain('| [`Point`](Point.md#point) | Two coordinates, stored either way. |');
+    expect(read(join(outputDir, 'acme-net.md'))).toContain('| [`detail`](acme-net-detail.md#detail) | Transport internals. |');
+  });
+
+  it('links every generated reference to the page and anchor its target is drawn at', async () => {
+    const pages = await generate({ directory: drawnLinksXmlDir, quiet: true });
+    const page = (slug: string) => pages.find((candidate) => candidate.slug === slug)!.markdown;
+    const drawn = new Map(pages.map((candidate) => [
+      `${candidate.slug}.html`,
+      new Set([...candidate.markdown.matchAll(/<a id="([^"]+)"><\/a>/g)].map(([, id]) => id)),
+    ]));
+    for (const candidate of pages) {
+      for (const [, href] of candidate.markdown.matchAll(/\]\(([^)\s]*#[^)\s]+)\)/g)) {
+        const [path, anchor] = href.split('#');
+        expect(drawn.get(path || `${candidate.slug}.html`)?.has(anchor), `${candidate.slug}: ${href}`).toBe(true);
+      }
+    }
+    // A namespace and its members are linked on the namespace's own page, not the module page that lists it.
+    expect(page('net')).toContain('| [`json`](demo-json.html#json) |');
+    expect(page('net')).toContain('Parses a [`json::Value`](demo-json.html#value) from a [`Buffer`](base.html#buffer).');
+    // An enum value lands on its enum, wherever the enum is drawn.
+    expect(page('demo-Socket')).toContain('in [`Mode::Safe`](base.html#mode)');
+    expect(page('demo-Stream')).toContain('Reads packets in a [`Mode`](base.html#mode).');
+    // A type no page draws has nowhere to land, so it reads as its name.
+    expect(page('demo-Stream')).toContain('| `Channels` | [`channels`](#channels)');
+  });
+
+  it('links a reference that is a whole code span, and keeps one within longer code as code', async () => {
+    const pages = await generate({ directory: drawnLinksXmlDir, quiet: true });
+    const socket = pages.find((page) => page.slug === 'demo-Socket')!.markdown;
+    expect(socket).toContain('Sends a [`Buffer`](base.html#buffer) in');
+    expect(socket).toContain('as `send(Buffer&)` and a');
+    // Markdown draws no link inside code, so no code span holds one.
+    const spans = (markdown: string) => markdown.replace(/^```[^]*?^```/gm, '').split('\n')
+      .flatMap((line) => line.split('`').filter((_, index) => index % 2 === 1));
+    for (const candidate of pages) expect(spans(candidate.markdown).filter((span) => span.includes(']('))).toEqual([]);
+  });
+
+  it('writes grouped output, page output, and root globals in one run', async () => {
+    const outputDir = join(outputRoot, 'issue-97');
+
+    await run({
+      directory: issue97XmlDir,
+      output: join(outputDir, '%s.md'),
+      groups: true,
+      pages: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    const page = read(join(outputDir, 'page-index.md'));
+    expect(page).toContain('# Main {#main}');
+    expect(page).toContain('Reference [Group 1](g1.md#group1)');
+    expect(page).toContain('Reference [a1](api.md#a1)');
+    expect(page).toContain('Reference [g1_a1](g1.md#g1_a1)');
+
+    const api = read(join(outputDir, 'api.md'));
+    expect(api).toContain('### a1');
+    expect(api).toContain('a1 is a top level 1');
+    expect(api).not.toContain('g1_a1');
+
+    const group = read(join(outputDir, 'g1.md'));
+    expect(group).toContain('### g1_a1');
+  });
+
+  it('renders top-level groups, nested groups, and ungrouped globals without losing global classes', async () => {
+    const outputDir = join(outputRoot, 'global-groups');
+
+    await run({
+      directory: globalGroupsXmlDir,
+      output: join(outputDir, '%s.md'),
+      groups: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    const api = read(join(outputDir, 'api.md'));
+    expect(api).toContain('## Groups');
+    expect(api).toContain('| [`Global Group`](global_group.md#globalgroup) | The group holding global entities. |');
+    expect(api).toContain('## Classes');
+    expect(api).toContain('| [`global_class`](#global_class) | This is a global class. |');
+    expect(api).toContain('## Functions');
+    expect(api).toContain('### mysql_tmpfile');
+    expect(api).toContain('#### Parameters');
+    expect(api).toContain('| `prefix` | `const char *` | prefix for temporary file name |');
+    expect(api).toContain('#### Return Values');
+    expect(api).toContain('| `-1` | error |');
+    expect(api).toContain('| `>=` | 0 a file handle that can be passed to dup or my_close |');
+    expect(api.match(/^#### Parameters$/gm)).toHaveLength(1);
+    expect(api).toContain('## Class Definitions');
+    expect(api).toContain('### global_class');
+    expect(api).not.toContain('nested_class');
+
+    const group = read(join(outputDir, 'global_group.md'));
+    expect(group).toContain('# Global Group');
+    // A group with both descriptions keeps the detailed body, not just the brief.
+    expect(group).toContain('The group holding global entities.');
+    expect(group).toContain("This is the global group's description.");
+    expect(group).not.toContain('## Description');
+    expect(group).toContain('## Groups');
+    expect(group).toContain('| [`Nested Group`](nested_group.md#nestedgroup) | This is the nested group');
+    expect(group).not.toContain('global_class');
+    expect(group).not.toContain('GDEFINE');
+
+    const nested = read(join(outputDir, 'nested_group.md'));
+    expect(nested).toContain('# Nested Group');
+    expect(nested).toContain('> [`Global Group`](global_group.md#globalgroup)');
+    expect(nested).toContain('## Classes');
+    expect(nested).toContain('## Class Definitions');
+    expect(nested).toContain('### nested_class');
+    // nested_class inherits nothing, so the all-members table would repeat the
+    // section table below it with less in it. It appears only where the Owner
+    // column has something to say; example/doc covers that case.
+    expect(nested).not.toContain('List of all members');
+    expect(nested).toContain('#### Public Attributes');
+    expect(nested).toContain('##### nested_class_a');
+
+    const pages = await generate({
+      directory: globalGroupsXmlDir,
+      groups: true,
+      quiet: true,
+    });
+
+    const groupPage = pages.find((page) => page.kind === 'group' && page.slug === 'global_group');
+    expect(groupPage).toBeDefined();
+    expect(groupPage!.markdown).toContain('[`Nested Group`](nested_group.html#nestedgroup)');
+
+    const nestedGroupPage = pages.find((page) => page.kind === 'group' && page.slug === 'nested_group');
+    expect(nestedGroupPage).toBeDefined();
+    expect(nestedGroupPage!.markdown).toContain('> [`Global Group`](global_group.html#globalgroup)');
+  });
+
+  it('writes standalone global class files when classes and groups are both enabled', async () => {
+    const outputDir = join(outputRoot, 'global-groups-classes');
+
+    await run({
+      directory: globalGroupsXmlDir,
+      output: join(outputDir, '%s.md'),
+      groups: true,
+      classes: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    expect(existsSync(join(outputDir, 'api.md'))).toBe(true);
+    expect(existsSync(join(outputDir, 'global_group.md'))).toBe(true);
+    expect(existsSync(join(outputDir, 'nested_group.md'))).toBe(true);
+    expect(existsSync(join(outputDir, 'global_class.md'))).toBe(true);
+    expect(existsSync(join(outputDir, 'nested_class.md'))).toBe(true);
+
+    const api = read(join(outputDir, 'api.md'));
+    expect(api).toContain('| [`global_class`](global_class.md#global_class) | This is a global class. |');
+    expect(api).not.toContain('## global_class');
+
+    const group = read(join(outputDir, 'global_group.md'));
+    expect(group).toContain('| [`Nested Group`](nested_group.md#nestedgroup) | This is the nested group');
+    expect(group).not.toContain('## nested_class');
+
+    const nested = read(join(outputDir, 'nested_group.md'));
+    expect(nested).toContain('| [`nested_class`](nested_class.md#nested_class) | This is a nested grouped class. |');
+    expect(nested).not.toContain('## nested_class');
+
+    const globalClass = read(join(outputDir, 'global_class.md'));
+    expect(globalClass).toContain('# global_class');
+    expect(globalClass).toContain('## Public Attributes');
+    expect(globalClass).toContain('### global_class_a');
+    expect(globalClass).toContain('This is a global class.');
+  });
+
+  it('writes global class files when classes are enabled without namespaces', async () => {
+    const outputDir = join(outputRoot, 'global-classes');
+
+    await run({
+      directory: globalGroupsXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    expect(existsSync(join(outputDir, 'global_class.md'))).toBe(true);
+    expect(existsSync(join(outputDir, 'nested_class.md'))).toBe(true);
+    expect(existsSync(join(outputDir, 'api.md'))).toBe(true);
+
+    const api = read(join(outputDir, 'api.md'));
+    expect(api).toContain('| [`global_class`](global_class.md#global_class) | This is a global class. |');
+    expect(api).not.toContain('## global_class');
+
+    const globalClass = read(join(outputDir, 'global_class.md'));
+    expect(globalClass).toContain('# global_class');
+    expect(globalClass).toContain('## Public Attributes');
+    expect(globalClass).toContain('### global_class_a');
+    expect(globalClass).toContain('This is a global class.');
+  });
+
+  it('keeps global-scope classes in default single-file output', async () => {
+    const output = join(outputRoot, 'global-single.md');
+
+    await run({
+      directory: globalGroupsXmlDir,
+      output,
+      anchors: true,
+      quiet: true,
+    });
+
+    const content = read(output);
+    expect(content).toContain('## global_class');
+    expect(content).toContain('This is a global class.');
+  });
+
+  it('keeps root-level classes from shared namespaces on grouped module pages', async () => {
+    const outputDir = join(outputRoot, 'shared-grouped');
+
+    await run({
+      directory: sharedGroupedXmlDir,
+      output: join(outputDir, '%s.md'),
+      groups: true,
+      anchors: true,
+      quiet: true,
+      sourceRoot: sharedGroupedSourceDir,
+    });
+
+    const baseContent = read(join(outputDir, 'base.md'));
+    const webrtcContent = read(join(outputDir, 'webrtc.md'));
+
+    expect(baseContent).toContain('# Base module');
+    expect(baseContent).toContain('Packet pipeline primitive owned by the base module.');
+    expect(baseContent).toContain('[`PacketStream`](#packetstream)');
+    expect(baseContent).toContain('## PacketStream');
+    expect(webrtcContent).toContain('base.md#packetstream');
+    expect(webrtcContent).toContain('uv.md#loop');
+    expect(webrtcContent).not.toContain('undefined.md');
+
+    const pages = await generate({
+      directory: sharedGroupedXmlDir,
+      groups: true,
+      anchors: true,
+      quiet: true,
+      sourceRoot: sharedGroupedSourceDir,
+    });
+
+    const groupPage = pages.find((page) => page.kind === 'group' && page.slug === 'webrtc');
+    expect(groupPage).toBeDefined();
+    expect(groupPage!.markdown).toContain('demo-PacketStream.html#packetstream');
+  });
+
+  it('resolves generated page descriptions with the same cross-links as the body markdown', async () => {
+    const pages = await generate({
+      directory: sharedGroupedXmlDir,
+      groups: true,
+      anchors: true,
+      quiet: true,
+      sourceRoot: sharedGroupedSourceDir,
+    });
+
+    const peerSession = pages.find((page) => page.slug === 'demo-PeerSession');
+    expect(peerSession).toBeDefined();
+    expect(peerSession!.description)
+      .toBe('Session type documented in a different group from [PacketStream](demo-PacketStream.html#packetstream).');
+  });
+
+  it('uses minimal namespace qualifiers for duplicate generated page titles', async () => {
+    const pages = await generate({
+      directory: titleDisambiguationXmlDir,
+      quiet: true,
+    });
+
+    const queue = pages.find((page) => page.slug === 'demo-Queue');
+    const ipcQueue = pages.find((page) => page.slug === 'demo-ipc-Queue');
+
+    expect(queue?.title).toBe('Queue');
+    expect(ipcQueue?.title).toBe('ipc::Queue');
+  });
+
+  it('writes resolved links into frontmatter descriptions', async () => {
+    const outputDir = join(outputRoot, 'shared-grouped-frontmatter');
+
+    await run({
+      directory: sharedGroupedXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: true,
+      quiet: true,
+      frontmatter: true,
+    });
+
+    const content = read(join(outputDir, 'demo-PeerSession.md'));
+    expect(content)
+      .toContain('description: "Session type documented in a different group from [PacketStream](demo-PacketStream.md#packetstream)."');
+  });
+
+  it('uses programlisting filename extension as the code fence language', async () => {
+    const outputDir = join(outputRoot, 'programlisting-language');
+
+    await run({
+      directory: programlistingLangXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: false,
+      quiet: true,
+    });
+
+    const content = read(join(outputDir, 'demo.md')).replace(/\r\n/g, '\n');
+    expect(content).toContain('```py');
+    expect(content).not.toContain('```cpp');
+  });
+
+  it('generates single file output', async () => {
+    const singleOutput = join(outputRoot, 'single-api.md');
+
+    await run({
+      directory: exampleXmlDir,
+      output: singleOutput,
+      quiet: true,
+    });
+
+    expect(existsSync(singleOutput)).toBe(true);
+    const content = read(singleOutput);
+    expect(content).toContain('Generated by [Moxygen]');
+    expect(content).toContain('Bicycle');
+    expect(content).toContain('MountainBike');
+    expect(content).toContain('RacingBike');
+  });
+
+  it('writes frontmatter for single file output', async () => {
+    const singleOutput = join(outputRoot, 'single-api-frontmatter.md');
+
+    await run({
+      directory: exampleXmlDir,
+      output: singleOutput,
+      quiet: true,
+      frontmatter: true,
+    });
+
+    const content = read(singleOutput);
+    expect(content).toMatch(/^---\ntitle: "API Reference"\nkind: index\n---\n# API Reference/);
+  });
+
+  it('does not duplicate Doxygen section titles into the section body', async () => {
+    const outputDir = join(outputRoot, 'title-duplication');
+
+    await run({
+      directory: titleDuplicationXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: false,
+      quiet: true,
+    });
+
+    const content = read(join(outputDir, 'demo.md')).replace(/\r\n/g, '\n');
+    expect(content).toContain('## Requirements\n\n### Windows\nSupported on Windows 11.');
+    expect(content).not.toContain('## Requirements\nRequirements');
+    expect(content).not.toContain('### Windows\nWindowsSupported on Windows 11.');
+  });
+
+  it('renders page-oriented XML tags used by detailed docs', async () => {
+    const outputDir = join(outputRoot, 'missing-tags');
+
+    await run({
+      directory: missingTagsXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    const content = read(join(outputDir, 'demo.md')).replace(/\r\n/g, '\n');
+    expect(content).toContain('Manual anchor {#namespacedemo_1manual_anchor}target.');
+    expect(content).toContain('```\ncmake --build .\nctest --output-on-failure\n```');
+    expect(content).toContain('* **Class**: Type-level documentation.');
+    expect(content).toContain('* **Member**: Member-level documentation.');
+    expect(content).toContain('##### Windows\nSupported on Windows 11.');
+  });
+
+  it('renders unions, static methods, and private members', async () => {
+    const outputDir = join(outputRoot, 'member-kinds');
+
+    await run({
+      directory: memberKindsXmlDir,
+      output: join(outputDir, '%s.md'),
+      classes: true,
+      anchors: true,
+      quiet: true,
+    });
+
+    const utility = read(join(outputDir, 'demo-Utility.md'));
+    expect(utility).toContain('## Public Static Methods');
+    expect(utility).toContain('| `Utility` | [`create`](#create) `static` | Creates a utility instance. |');
+    expect(utility).toContain('static Utility create()');
+    expect(utility).toContain('## Public Methods');
+    expect(utility).toContain('| `auto` | [`modern`](#modern) `virtual` `const` `inline` `nodiscard` `constexpr` `&` `noexcept(noexcept(std::declval<T>()))` `-> int` `requires std::integral<T>` | Modern qualified member. |');
+    expect(utility).toContain('template<typename T> [[nodiscard]] constexpr virtual inline auto modern() const & noexcept(noexcept(std::declval<T>())) -> int requires std::integral<T>');
+    expect(utility).toContain('## Private Methods');
+    expect(utility).toContain('Hidden helper method.');
+    expect(utility).toContain('## Private Attributes');
+    expect(utility).toContain('Private instance state.');
+    expect(utility).toContain('## Private Static Attributes');
+    expect(utility).toContain('| `int` | [`globalSecret`](#globalsecret) `static` | Private static state. |');
+
+    const union = read(join(outputDir, 'demo-Value.md'));
+    expect(union).toContain('# Value');
+    expect(union).toContain('Union value representation.');
+    expect(union).toContain('## Public Attributes');
+    expect(union).toContain('Integer representation.');
+  });
+
+  it('renders admonitions as GitHub alerts when that flavour is chosen', async () => {
+    const output = join(outputRoot, 'macros-github', 'api.md');
+
+    await run({ directory: macrosXmlDir, output, anchors: true, quiet: true, flavour: 'github' });
+
+    const api = read(output);
+    expect(api).toContain('> [!NOTE]\n> Flushing is best effort.');
+    expect(api).toContain('> [!WARNING]\n> Blocks until the queue is empty.');
+    expect(api).toContain('> [!IMPORTANT]\n> Never call this from a signal handler.');
+    // GitHub renders the Pandoc container syntax as literal text.
+    expect(api).not.toContain(':::');
+    // An alert inside a list item sits at the item's content column, or it
+    // ends the list instead of belonging to it.
+    expect(api).toContain('  > [!NOTE]\n  > callers should not rely on the count');
+  });
+
+  it('renders macros by their real shape and keeps undocumented ones', async () => {
+    const output = join(outputRoot, 'macros', 'api.md');
+
+    await run({
+      directory: macrosXmlDir,
+      output,
+      anchors: true,
+      quiet: true,
+    });
+
+    const api = read(output);
+    expect(api).toContain('## Macros');
+    expect(api).toContain('#define MAX_RETRIES 5');
+    expect(api).toContain('#define CLAMP(VALUE, LO, HI)');
+    expect(api).toContain('#define UNREACHABLE() __builtin_unreachable()');
+    expect(api).toContain('the value to clamp');
+
+    // EXTRACT_ALL asked for this one, so moxygen must not silently drop it.
+    expect(api).toContain('UNDOCUMENTED_FLAG');
+    // Doxygen never emits the include guard in the first place.
+    expect(api).not.toContain('__MACROS_H__');
+
+    // Unnamed parameters keep their type.
+    expect(api).toContain('void reset(int)');
+
+    // An initializer that cross-references another symbol keeps the reference
+    // as text. Reading the XML as flat text would leave "#define RETRY_HOOK ->retry".
+    expect(api).toContain('#define RETRY_HOOK registry->retry');
+
+    // A parameter whose type is another documented symbol stays clickable.
+    // Wrapping the whole type in a code span would print the link literally.
+    expect(api).toContain('| `target` | struct [`handlers`](#handlers) * | the registry to configure |');
+  });
+});

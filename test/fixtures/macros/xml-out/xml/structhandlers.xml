@@ -1,0 +1,78 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.17.0" xml:lang="en-US">
+  <compounddef id="structhandlers" kind="struct" language="C++" prot="public">
+    <compoundname>handlers</compoundname>
+    <includes refid="macros_8h" local="no">macros.h</includes>
+    <sectiondef kind="public-attrib">
+      <memberdef kind="variable" id="structhandlers_1a996535b7879fb9713680e41af2b2791a" prot="public" static="no" mutable="no">
+        <type>int(*</type>
+        <definition>int(* handlers::retry) (int attempt, const char *reason)</definition>
+        <argsstring>)(int attempt, const char *reason)</argsstring>
+        <name>retry</name>
+        <qualifiedname>handlers::retry</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Called when a retry is scheduled.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>attempt</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the attempt number, starting at one </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>reason</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>why the retry was scheduled </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>zero to stop retrying </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="86" column="3" bodyfile="src/macros.h" bodystart="86" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="variable" id="structhandlers_1adb541f4c21033e417256fd5cab26e6b2" prot="public" static="no" mutable="no">
+        <type>struct <ref refid="structhandlers" kindref="compound">handlers</ref> *</type>
+        <definition>struct handlers* handlers::fallback</definition>
+        <argsstring></argsstring>
+        <name>fallback</name>
+        <qualifiedname>handlers::fallback</qualifiedname>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The registry consulted when this one has no handler. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="89" column="17" bodyfile="src/macros.h" bodystart="89" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para>Registry of handler hooks. </para>
+    </detaileddescription>
+    <collaborationgraph>
+      <node id="1">
+        <label>handlers</label>
+        <link refid="structhandlers"/>
+        <childnode refid="1" relation="usage">
+          <edgelabel>fallback</edgelabel>
+        </childnode>
+      </node>
+    </collaborationgraph>
+    <location file="src/macros.h" line="78" column="1" bodyfile="src/macros.h" bodystart="78" bodyend="90"/>
+    <listofallmembers>
+      <member refid="structhandlers_1adb541f4c21033e417256fd5cab26e6b2" prot="public" virt="non-virtual"><scope>handlers</scope><name>fallback</name></member>
+      <member refid="structhandlers_1a996535b7879fb9713680e41af2b2791a" prot="public" virt="non-virtual"><scope>handlers</scope><name>retry</name></member>
+    </listofallmembers>
+  </compounddef>
+</doxygen>

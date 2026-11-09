@@ -1,0 +1,295 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.17.0" xml:lang="en-US">
+  <compounddef id="macros_8h" kind="file" language="C++">
+    <compoundname>macros.h</compoundname>
+    <innerclass refid="structhandlers" prot="public">handlers</innerclass>
+    <sectiondef kind="define">
+      <memberdef kind="define" id="macros_8h_1aecf13b8dc783db2202ca5c34fe117fc3" prot="public" static="no">
+        <name>MAX_RETRIES</name>
+        <initializer>5</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>The maximum number of retries. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="7" column="9" bodyfile="src/macros.h" bodystart="7" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="macros_8h_1a318c6ec23f270a54557c2012c4dd0bce" prot="public" static="no">
+        <name>CLAMP</name>
+        <param><defname>VALUE</defname></param>
+        <param><defname>LO</defname></param>
+        <param><defname>HI</defname></param>
+        <initializer>((VALUE) &lt; (LO) ? (LO) : ((VALUE) &gt; (HI) ? (HI) : (VALUE)))</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Clamp a value into an inclusive range.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>VALUE</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the value to clamp </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>LO</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the lower bound </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>HI</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the upper bound </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="16" column="9" bodyfile="src/macros.h" bodystart="16" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="macros_8h_1a0bc63b24b654ca433be7b97a3edde132" prot="public" static="no">
+        <name>UNREACHABLE</name>
+        <param></param>
+        <initializer>__builtin_unreachable()</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Mark a code path as unreachable. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="21" column="9" bodyfile="src/macros.h" bodystart="21" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="macros_8h_1a920685f0ba8f8eebd13a8feb6ae286f6" prot="public" static="no">
+        <name>UNDOCUMENTED_FLAG</name>
+        <initializer>1</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="23" column="9" bodyfile="src/macros.h" bodystart="23" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="macros_8h_1a1ee636c8ea8ef76556c00290eb5a289b" prot="public" static="no">
+        <name>RETRY_HOOK</name>
+        <initializer><ref refid="macros_8h_1a37285142ae15ca3cdc36f3a03faeb0c9" kindref="member">registry</ref>-&gt;retry</initializer>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Shorthand for the registry retry hook. Its initializer references another documented symbol, so Doxygen emits a cross-reference inside the initializer. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="96" column="9" bodyfile="src/macros.h" bodystart="96" bodyend="-1"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="var">
+      <memberdef kind="variable" id="macros_8h_1a37285142ae15ca3cdc36f3a03faeb0c9" prot="public" static="no" mutable="no">
+        <type>struct <ref refid="structhandlers" kindref="compound">handlers</ref> *</type>
+        <definition>struct handlers * registry</definition>
+        <argsstring></argsstring>
+        <name>registry</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="90" column="11"/>
+      </memberdef>
+    </sectiondef>
+    <sectiondef kind="func">
+      <memberdef kind="function" id="macros_8h_1aa77e5763e57ffef3a8c0f08af40a73f8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void reset</definition>
+        <argsstring>(int)</argsstring>
+        <name>reset</name>
+        <param>
+          <type>int</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Reset the retry counter. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="28" column="6" declfile="src/macros.h" declline="28" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="macros_8h_1a0a9e9396972b76c5947592479860020d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void flush</definition>
+        <argsstring>(void)</argsstring>
+        <name>flush</name>
+        <param>
+          <type>void</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Flush pending work.</para>
+<para><simplesect kind="note"><para>Flushing is best effort. </para>
+</simplesect>
+<simplesect kind="remark"><para>Callers usually prefer <ref refid="macros_8h_1a8168e46e61860b969b9ee6c101bbc1c9" kindref="member">drain()</ref>. </para>
+</simplesect>
+<simplesect kind="warning"><para>Blocks until the queue is empty. </para>
+</simplesect>
+<simplesect kind="attention"><para>Never call this from a signal handler.</para>
+</simplesect>
+<xrefsect id="deprecated_1_deprecated000001"><xreftitle>Deprecated</xreftitle><xrefdescription><para>Use <ref refid="macros_8h_1a8168e46e61860b969b9ee6c101bbc1c9" kindref="member">drain()</ref> instead. </para>
+</xrefdescription></xrefsect></para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="39" column="6" declfile="src/macros.h" declline="39" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="macros_8h_1a8168e46e61860b969b9ee6c101bbc1c9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void drain</definition>
+        <argsstring>(void)</argsstring>
+        <name>drain</name>
+        <param>
+          <type>void</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Drain the queue.</para>
+<para>Ordering rules:</para>
+<para><itemizedlist>
+<listitem><para>first<itemizedlist>
+<listitem><para>first.a</para>
+</listitem><listitem><para>first.b</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>second<itemizedlist>
+<listitem><para>second.a</para>
+</listitem></itemizedlist>
+</para>
+</listitem><listitem><para>third</para>
+</listitem></itemizedlist>
+</para>
+<para>Steps:</para>
+<para><orderedlist>
+<listitem><para>open<orderedlist>
+<listitem><para>acquire</para>
+</listitem><listitem><para>verify</para>
+</listitem></orderedlist>
+</para>
+</listitem><listitem><para>close</para>
+</listitem></orderedlist>
+</para>
+<para>Terms:</para>
+<para><variablelist>
+<varlistentry><term>pending</term></varlistentry>
+<listitem><para>queued but not started </para>
+</listitem>
+<varlistentry><term>settled</term></varlistentry>
+<listitem><para>finished either way </para>
+</listitem>
+</variablelist>
+</para>
+<para>Caveats:</para>
+<para><itemizedlist>
+<listitem><para>the queue may grow while draining <simplesect kind="note"><para>callers should not rely on the count</para>
+</simplesect>
+</para>
+</listitem><listitem><para>draining twice is safe </para>
+</listitem></itemizedlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="73" column="6" declfile="src/macros.h" declline="73" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="macros_8h_1af6f5804d6181b428b0abd148e8005ff6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>struct <ref refid="structhandlers" kindref="compound">handlers</ref> *</type>
+        <definition>struct handlers * configure</definition>
+        <argsstring>(struct handlers *target, int count)</argsstring>
+        <name>configure</name>
+        <param>
+          <type>struct <ref refid="structhandlers" kindref="compound">handlers</ref> *</type>
+          <declname>target</declname>
+        </param>
+        <param>
+          <type>int</type>
+          <declname>count</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Configure a handler registry.</para>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>target</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the registry to configure </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>count</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>how many retries to allow </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>the configured registry </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="src/macros.h" line="105" column="15" declfile="src/macros.h" declline="105" declcolumn="15"/>
+      </memberdef>
+    </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="preprocessor">#ifndef<sp/>__MACROS_H__</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="2"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>__MACROS_H__</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="3"><highlight class="normal"></highlight></codeline>
+<codeline lineno="7" refid="macros_8h_1aecf13b8dc783db2202ca5c34fe117fc3" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>MAX_RETRIES<sp/>5</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="8"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16" refid="macros_8h_1a318c6ec23f270a54557c2012c4dd0bce" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>CLAMP(VALUE,<sp/>LO,<sp/>HI)<sp/>((VALUE)<sp/>&lt;<sp/>(LO)<sp/>?<sp/>(LO)<sp/>:<sp/>((VALUE)<sp/>&gt;<sp/>(HI)<sp/>?<sp/>(HI)<sp/>:<sp/>(VALUE)))</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21" refid="macros_8h_1a0bc63b24b654ca433be7b97a3edde132" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>UNREACHABLE()<sp/>__builtin_unreachable()</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23" refid="macros_8h_1a920685f0ba8f8eebd13a8feb6ae286f6" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>UNDOCUMENTED_FLAG<sp/>1</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28" refid="macros_8h_1aa77e5763e57ffef3a8c0f08af40a73f8" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="macros_8h_1aa77e5763e57ffef3a8c0f08af40a73f8" kindref="member">reset</ref>(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39" refid="macros_8h_1a0a9e9396972b76c5947592479860020d" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="macros_8h_1a0a9e9396972b76c5947592479860020d" kindref="member">flush</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="73" refid="macros_8h_1a8168e46e61860b969b9ee6c101bbc1c9" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="macros_8h_1a8168e46e61860b969b9ee6c101bbc1c9" kindref="member">drain</ref>(</highlight><highlight class="keywordtype">void</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78" refid="structhandlers" refkind="compound"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structhandlers" kindref="compound">handlers</ref><sp/>{</highlight></codeline>
+<codeline lineno="86" refid="structhandlers_1a996535b7879fb9713680e41af2b2791a" refkind="member"><highlight class="normal"><sp/><sp/>int<sp/>(*<ref refid="structhandlers_1a996535b7879fb9713680e41af2b2791a" kindref="member">retry</ref>)(</highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>attempt,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal"><sp/>*reason);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="89" refid="structhandlers_1adb541f4c21033e417256fd5cab26e6b2" refkind="member"><highlight class="normal"><sp/><sp/></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structhandlers" kindref="compound">handlers</ref><sp/>*<ref refid="structhandlers_1adb541f4c21033e417256fd5cab26e6b2" kindref="member">fallback</ref>;</highlight></codeline>
+<codeline lineno="90" refid="macros_8h_1a37285142ae15ca3cdc36f3a03faeb0c9" refkind="member"><highlight class="normal">}<sp/>*<ref refid="macros_8h_1a37285142ae15ca3cdc36f3a03faeb0c9" kindref="member">registry</ref>;</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96" refid="macros_8h_1a1ee636c8ea8ef76556c00290eb5a289b" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>RETRY_HOOK<sp/>registry-&gt;retry</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="105" refid="macros_8h_1af6f5804d6181b428b0abd148e8005ff6" refkind="member"><highlight class="normal"></highlight><highlight class="keyword">struct<sp/></highlight><highlight class="normal"><ref refid="structhandlers" kindref="compound">handlers</ref><sp/>*<ref refid="macros_8h_1af6f5804d6181b428b0abd148e8005ff6" kindref="member">configure</ref>(</highlight><highlight class="keyword">struct</highlight><highlight class="normal"><sp/><ref refid="structhandlers" kindref="compound">handlers</ref><sp/>*target,<sp/></highlight><highlight class="keywordtype">int</highlight><highlight class="normal"><sp/>count);</highlight></codeline>
+<codeline lineno="106"><highlight class="normal"></highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">/*<sp/>__MACROS_H__<sp/>*/</highlight><highlight class="preprocessor"></highlight></codeline>
+    </programlisting>
+    <location file="src/macros.h"/>
+  </compounddef>
+</doxygen>

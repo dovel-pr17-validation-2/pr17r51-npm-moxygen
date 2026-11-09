@@ -1,0 +1,369 @@
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, format as formatPath, relative } from 'node:path';
+import { format as utilFormat } from 'node:util';
+import { log } from './logger.js';
+import type { Compound, Member, MoxygenOptions, References } from './types.js';
+
+export type AnchorMap = Map<string, string>;
+export type PagePathMap = Map<string, string>;
+
+/** The page and anchor a reference's target is drawn at. */
+export interface LinkTarget {
+  path: string;
+  anchor: string;
+}
+
+/** The page being resolved, and where every drawn target landed. */
+export interface PageLinks {
+  path: string;
+  targets: Map<string, LinkTarget>;
+}
+
+/**
+ * Wrap code segments in backticks, preserving markdown links and line breaks.
+ */
+export function inline(code: string | string[]): string {
+  if (!Array.isArray(code)) {
+    return `\`${code}\``;
+  }
+
+  let s = '';
+  let isInline = false;
+
+  for (const segment of code) {
+    const refs = segment.split(/(\[.*?\]\(.*?\)|\n|\s{2}\n)/g);
+
+    for (const fragment of refs) {
+      if (fragment.charAt(0) === '[') {
+        const match = fragment.match(/\[(.*?)\]\((.*?)\)/);
+        if (match) {
+          if (isInline) { s += '`'; isInline = false; }
+          s += `[\`${match[1]}\`](${match[2]})`;
+        }
+      } else if (fragment === '\n' || fragment === '  \n') {
+        if (isInline) { s += '`'; isInline = false; }
+        s += fragment;
+      } else if (fragment) {
+        if (!isInline) { s += '`'; isInline = true; }
+        s += fragment;
+      }
+    }
+  }
+
+  return s + (isInline ? '`' : '');
+}
+
+/**
+ * Strip markdown links from generated type/signature text while preserving labels.
+ */
+export function stripMarkdownLinks(text: string): string {
+  return (text || '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+}
+
+/**
+ * Convert a C++ symbol into a filesystem- and URL-safe path segment.
+ */
+export function safePathSegment(name: string): string {
+  return (name || 'unknown')
+    .replace(/::/g, '-')
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+/**
+ * Generate an anchor string based on options.
+ */
+export function getAnchor(name: string, options: Pick<MoxygenOptions, 'anchors' | 'htmlAnchors'>): string {
+  if (options.anchors) {
+    return `{#${name}}`;
+  }
+  if (options.htmlAnchors) {
+    return `<a id="${name}"></a>`;
+  }
+  return '';
+}
+
+/**
+ * Find the nearest parent compound matching one of the given kinds.
+ */
+export function findParent(compound: Compound | Member | undefined, kinds: string[]): Compound | undefined {
+  let current = compound as Compound | undefined;
+  while (current) {
+    if (kinds.includes(current.kind)) return current;
+    current = current.parent as Compound | undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Convert a name to a clean URL-safe anchor ID.
+ */
+export function cleanId(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/::/g, '-')
+    .replace(/[^a-z0-9_-]/g, '')
+    .replace(/^-+|-+$/g, '') || 'unknown';
+}
+
+/**
+ * Build a map from Doxygen refids to clean, human-readable anchor IDs.
+ * Handles deduplication for overloaded names.
+ */
+export function buildCleanAnchorMap(compounds: Compound[]): AnchorMap {
+  const map = new Map<string, string>();
+  const used = new Set<string>();
+  const seen = new Set<string>();
+
+  function dedup(base: string): string {
+    let id = base;
+    let i = 1;
+    while (used.has(id)) { id = `${base}-${i++}`; }
+    used.add(id);
+    return id;
+  }
+
+  function visit(compound: Compound): void {
+    if (seen.has(compound.refid)) {
+      return;
+    }
+    seen.add(compound.refid);
+
+    const compClean = dedup(cleanId(compound.shortname || compound.name));
+    map.set(compound.refid, compClean);
+
+    for (const member of compound.filtered?.members || compound.members || []) {
+      if (seen.has(member.refid)) {
+        continue;
+      }
+      seen.add(member.refid);
+      const memberClean = dedup(cleanId(member.name));
+      map.set(member.refid, memberClean);
+    }
+
+    for (const child of Object.values(compound.compounds)) {
+      visit(child);
+    }
+  }
+
+  for (const compound of compounds) {
+    visit(compound);
+  }
+
+  return map;
+}
+
+/**
+ * Resolve internal reference links to point to correct output files.
+ */
+export type SlugMap = Map<string, string>;
+
+export function resolveRefs(
+  content: string,
+  compound: Compound,
+  references: References,
+  options: MoxygenOptions,
+  anchorMap?: AnchorMap,
+  slugMap?: SlugMap,
+  pagePathMap?: PagePathMap,
+  links?: PageLinks,
+): string {
+  if (links) return resolveDrawnRefs(content, links);
+
+  function anchor(refid: string): string {
+    return anchorMap?.get(refid) ?? refid;
+  }
+
+  function outputPath(dest: Compound): string {
+    const mappedPath = pagePathMap?.get(dest.refid);
+    if (mappedPath) {
+      return mappedPath;
+    }
+
+    if (slugMap) {
+      const slug = slugMap.get(dest.refid);
+      if (slug) return `${slug}.html`;
+      // Fallback: try parent group/namespace
+      if (dest.parent) {
+        const parentSlug = slugMap.get(dest.parent.refid);
+        if (parentSlug) return `${parentSlug}.html`;
+      }
+    }
+    return compoundPath(dest, options);
+  }
+
+  function hrefTo(dest: Compound, refid: string): string {
+    const targetPath = outputPath(dest);
+    const currentPath = outputPath(compound);
+    if (targetPath === currentPath) {
+      return `#${anchor(refid)}`;
+    }
+    if (slugMap) {
+      return `${targetPath}#${anchor(refid)}`;
+    }
+
+    const relPath = relative(dirname(currentPath), targetPath).replace(/\\/g, '/');
+    return `${relPath || targetPath}#${anchor(refid)}`;
+  }
+
+  function mappedHref(refid: string): string | undefined {
+    const targetPath = pagePathMap?.get(refid);
+    if (!targetPath) return undefined;
+
+    const currentPath = outputPath(compound);
+    if (targetPath === currentPath) {
+      return `#${anchor(refid)}`;
+    }
+    if (slugMap) {
+      return `${targetPath}#${anchor(refid)}`;
+    }
+
+    const relPath = relative(dirname(currentPath), targetPath).replace(/\\/g, '/');
+    return `${relPath || targetPath}#${anchor(refid)}`;
+  }
+
+  return content.replace(/\{#ref ([^ ]+) #\}/g, (_, refid: string) => {
+    const ref = references[refid];
+    if (!ref) return `#${anchor(refid)}`;
+
+    const page = findParent(ref, ['page']);
+
+    if (page) {
+      return hrefTo(page, refid);
+    }
+
+    const directHref = mappedHref(refid);
+    if (directHref) {
+      return directHref;
+    }
+
+    if (options.groups || slugMap) {
+      const dest = findParent(ref, ['class', 'struct', 'interface', 'enum', 'group', 'namespace']);
+      if (!dest) return `#${anchor(refid)}`;
+      return hrefTo(dest, refid);
+    }
+
+    if (options.classes) {
+      const dest = findParent(ref, ['namespace', 'class', 'struct']);
+      if (!dest) return `#${anchor(refid)}`;
+      return hrefTo(dest, refid);
+    }
+
+    if (compound.kind === 'page') {
+      return hrefTo(compound.parent as Compound, refid);
+    }
+
+    return `#${anchor(refid)}`;
+  });
+}
+
+/**
+ * Point each reference at the page and anchor its target was drawn at. A
+ * target no page draws (a private member, an undocumented symbol) has nowhere
+ * to land, so its link reads as its text.
+ */
+function resolveDrawnRefs(content: string, links: PageLinks): string {
+  const href = (refid: string): string | undefined => {
+    const target = links.targets.get(refid);
+    if (!target) return undefined;
+    if (target.path === links.path) return `#${target.anchor}`;
+    return `${relative(dirname(links.path), target.path).replace(/\\/g, '/')}#${target.anchor}`;
+  };
+  let out = '';
+  let done = 0;
+  for (const match of content.matchAll(/\]\(\{#ref ([^ ]+) #\}\)/g)) {
+    const close = match.index;
+    const open = openingBracket(content, close, done);
+    const target = href(match[1]);
+    if (open === -1) {
+      out += content.slice(done, close) + (target ? `](${target})` : ']');
+    } else {
+      out += content.slice(done, open) + (target ? `${content.slice(open, close)}](${target})` : content.slice(open + 1, close));
+    }
+    done = close + match[0].length;
+  }
+  out += content.slice(done);
+  return out.replace(/\{#ref ([^ ]+) #\}/g, (_, refid: string) => href(refid) ?? '#');
+}
+
+/** The `[` that a link text's closing `]` pairs with, or -1. */
+function openingBracket(content: string, close: number, floor: number): number {
+  let depth = 1;
+  for (let i = close - 1; i >= floor; i--) {
+    if (content[i] === ']') depth++;
+    else if (content[i] === '[' && --depth === 0) return i;
+  }
+  return -1;
+}
+
+/**
+ * Calculate the output file path for a compound.
+ */
+export function compoundPath(compound: Compound, options: MoxygenOptions): string {
+  if (compound.kind === 'page') {
+    return `${dirname(options.output)}/page-${compound.name}.md`;
+  }
+  if (compound.kind === 'index' && (options.groups || options.classes)) {
+    return `${dirname(options.output)}/api.md`;
+  }
+  if (options.groups && compound.kind === 'group') {
+    return utilFormat(options.output, compound.groupname);
+  }
+  if (options.classes) {
+    return utilFormat(
+      options.output,
+      safePathSegment(compound.name),
+    );
+  }
+  if (options.groups) {
+    return utilFormat(options.output, compound.groupname);
+  }
+  return options.output;
+}
+
+/**
+ * Render a compound's contents to a string, resolving refs.
+ */
+export function renderCompound(
+  compound: Compound,
+  contents: (string | undefined)[],
+  references: References,
+  options: MoxygenOptions,
+  anchorMap?: AnchorMap,
+  slugMap?: SlugMap,
+  pagePathMap?: PagePathMap,
+  links?: PageLinks,
+): string {
+  const resolved = contents.map((content) =>
+    content ? resolveRefs(content, compound, references, options, anchorMap, slugMap, pagePathMap, links) : '',
+  );
+  return resolved.filter(Boolean).join('');
+}
+
+/**
+ * Write a compound's rendered contents to file, resolving refs first.
+ */
+export function writeCompound(
+  compound: Compound,
+  contents: (string | undefined)[],
+  references: References,
+  options: MoxygenOptions,
+  anchorMap?: AnchorMap,
+  pagePathMap?: PagePathMap,
+  links?: PageLinks,
+): void {
+  const filepath = compoundPath(compound, options);
+  const output = renderCompound(compound, contents, references, options, anchorMap, undefined, pagePathMap, links);
+  writeFile(filepath, [output]);
+}
+
+/**
+ * Write content array to a file.
+ */
+export function writeFile(filepath: string, contents: string[]): void {
+  log.verbose(`Writing: ${filepath}`);
+  mkdirSync(dirname(filepath), { recursive: true });
+  const output = contents.filter(Boolean).join('');
+  writeFileSync(filepath, output, 'utf8');
+}
